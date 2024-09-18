@@ -41,22 +41,24 @@
 #define SI5351_maxFreqOut 112000 //maximum acceptable output frequency (kHz)
 #define SI5351_minMsOutFreq 500 //minimum acceptable multisynth output frequency for the output multisynth (kHz)
 #define SI5351_maxMsOutFreq 150000 //max acceptable multisynth output frequency for the output multisynth (kHz)
-#define SI5351_minPLLFreq 600000 //minimum acceptable PLL frequency (kHz)
-#define SI5351_maxPLLFreq 900000 //maximum acceptable PLL frequency (kHz) 
+
+#define SI5351_minSprSpecDown -2.5 //minimum acceptable down spread for spread spectrum operation (%)
+#define SI5351_maxSprSpecDown -0.1 //maximum acceptable down spread for spread spectrum operation (%)
+#define SI5351_minSprSpecCent -1.5 // minimum acceptable center spread for spread spectrum operation (%)
+#define SI5351_maxSprSpecCent 1.5 // maximum acceptable center spread for spread spectrum operation (%)
 
 #define msDenominator 1000000 // this is the MS denominator used for setting the feedbacks
 
 
+
 #define SI5351_Addr 0x60 //This is the I2C address of the SI5351
 
-//floats
-//float si5351_outFreq[6]; // the desired output frequency in kHz. Set to 0 to turn off output.
-//uint8_t si5351_outPhase90[6]; // the desired initial output phase in 45 degree increments.
+
 
 
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(115200); // just for debugging
+  //Serial.begin(115200); // just for debugging
   
   si5351_init(); // initialize the clock generator
 }
@@ -69,10 +71,169 @@ void loop() {
   }
 }
 
-void // TODO: Yes
+
+bool // TODO: Test
 si5351_spreadSpectrum(float percent, bool downSpread)
 {
-  
+  //check if the requested spread is 0 (turn off)
+  if(0 == percent)
+  { //done?
+    //turn off the spread spectrum
+      si5351_WriteRegister(149, 0x00); //set spread spec enable bit to 0 (along w/ the rest of the reg, but doesn't matter)
+      si5351_WriteRegister(22, 0b11000000); //set PLL A to int mode
+      return true; // spread spectrum was sucessfully disabled
+  }
+  else
+  {
+    //initialize the variables that both modes share
+    uint8_t SSUDP[2];
+    float SSDN;
+    uint8_t SSDN_P1[2];
+    uint8_t SSDN_P2[2];
+    uint8_t SSDN_P3[2];
+    uint8_t SSUP_P1[2];
+    uint8_t SSUP_P2[2];
+    uint8_t SSUP_P3[2];
+    float sscAmp = percent / 100;
+
+    //Calculate and set shared parameters
+    SSUDP[1] = 0x00; // based on the XO freq
+    SSUDP[0] = 0xC6; // based on the XO freq
+    SSDN = (320/33) * (sscAmp / (1+sscAmp)) * (2 - ((float)downSpread)); // also based on SSUDP //check if works
+    SSDN_P1[1] = ((uint8_t)(((uint16_t)floor(SSDN))>> 8)) & 0x0F;
+    SSDN_P1[0] = (uint8_t)(((uint16_t)floor(SSDN)) & 0x00FF);
+    SSDN_P2[1] = (uint8_t)((((uint16_t)(32767 * (SSDN - floor(SSDN)))) & 0x7F00) >> 8);
+    SSDN_P2[0] = (uint8_t)(32767 * (SSDN - floor(SSDN)));
+    SSDN_P3[1] = 0x7F; //given in AN619
+    SSDN_P3[0] = 0xFF; //given in AN619
+    
+        
+    if(0 == downSpread)
+    { // done?
+      //The spread type is down spread
+
+      //is the requested spread within the allowable limits?
+      if((percent >= SI5351_minSprSpecDown) && (percent <= SI5351_maxSprSpecDown))
+      {//done?
+        //The requested spread is within the requested limits
+
+        si5351_WriteRegister(22, 0b10000000);//set PLL A to fractional mode
+
+        //create variables for spread spec params
+          //shares all variables w/ center spread
+
+        //calculate up spread params
+          //given in datasheet for down spread
+          SSUP_P1[1] = 0x00;
+          SSUP_P1[0] = 0x00;
+          SSUP_P2[1] = 0x00;
+          SSUP_P2[0] = 0x00;
+          SSUP_P3[1] = 0x00;
+          SSUP_P3[0] = 0x01;
+
+        //calculate new register values
+        uint8_t reg149 = SSDN_P2[1] + 0x80;
+        //register 150 is SSDN_P2[0]
+        //register 151 is SSDN_P3[1] + 0x00
+        //register 152 is SSDN_P3[0]
+        //register 153 is SSDN_P1[0]
+        uint8_t reg154 = ((uint8_t)(SSUDP[1] << 4)) + SSDN_P1[1]; // check if works
+        //register 155 is SSUDP[0]
+        //register 156 is SSUP_P2[1]
+        //register 157 is SSUP_P2[0]
+        //register 158 is SSUP_P3[1]
+        //register 159 is SSUP_P3[0]
+        //register 160 is SSUP_P1[0]
+        //register 161 is SSUP_P1[1]
+
+        
+        //update registers
+        si5351_WriteRegister(149, reg149);
+        si5351_WriteRegister(150, SSDN_P2[0]);
+        si5351_WriteRegister(151, SSDN_P3[1] + 0x00);
+        si5351_WriteRegister(152, SSDN_P3[0]);
+        si5351_WriteRegister(153, SSDN_P1[0]);
+        si5351_WriteRegister(154, reg154);
+        si5351_WriteRegister(155, SSUDP[0]);
+        si5351_WriteRegister(156, SSUP_P2[1]);
+        si5351_WriteRegister(157, SSUP_P2[0]);
+        si5351_WriteRegister(158, SSUP_P3[1]);
+        si5351_WriteRegister(159, SSUP_P3[0]);
+        si5351_WriteRegister(160, SSUP_P1[0]);
+        si5351_WriteRegister(161, SSUP_P1[1]);
+        
+        return true; // signal that spread spectrum was sucessfully set
+      }
+      else
+      {//done?
+        //The requested spread is not within the requested limits
+        //Do something, IDK
+        return false; // signal that there was a problem
+      }
+    }
+    else //-------------------------------------------
+    { // done?
+      //The spread type is center spread
+
+      //is the requested spread within the allowable limits?
+      if((percent >= SI5351_minSprSpecCent) && (percent <= SI5351_maxSprSpecCent))
+      {//done?
+        //The requested spread is within the requested limits
+
+        si5351_WriteRegister(22, 0b10000000);//set PLL A to fractional mode
+
+        //calculate rest of the parameters
+        float SSUP = (640/33) * (sscAmp / (1-sscAmp)); 
+        SSUP_P1[1] = ((uint8_t)(((uint16_t)floor(SSUP))>> 8)) & 0x0F;
+        SSUP_P1[0] = (uint8_t)(((uint16_t)floor(SSUP)) & 0x00FF);
+        SSUP_P2[1] = (uint8_t)((((uint16_t)(32767 * (SSUP - floor(SSUP)))) & 0x7F00) >> 8);
+        SSUP_P2[0] = (uint8_t)(32767 * (SSUP - floor(SSUP)));
+        SSUP_P3[1] = 0x7F;
+        SSUP_P3[0] = 0xFF;
+
+        
+        //calculate new register values
+        uint8_t reg149 = SSDN_P2[1] + 0x80;
+        //register 150 is SSDN_P2[0]
+        //register 151 is SSDN_P3[1] + 0x00
+        //register 152 is SSDN_P3[0]
+        //register 153 is SSDN_P1[0]
+        uint8_t reg154 = ((uint8_t)(SSUDP[1] << 4)) + SSDN_P1[1]; // check if works
+        //register 155 is SSUDP[0]
+        //register 156 is SSUP_P2[1]
+        //register 157 is SSUP_P2[0]
+        //register 158 is SSUP_P3[1]
+        //register 159 is SSUP_P3[0]
+        //register 160 is SSUP_P1[0]
+        //register 161 is SSUP_P1[1]
+
+        
+        //update registers
+        si5351_WriteRegister(149, reg149);
+        si5351_WriteRegister(150, SSDN_P2[0]);
+        si5351_WriteRegister(151, SSDN_P3[1] + 0x80);
+        si5351_WriteRegister(152, SSDN_P3[0]);
+        si5351_WriteRegister(153, SSDN_P1[0]);
+        si5351_WriteRegister(154, reg154);
+        si5351_WriteRegister(155, SSUDP[0]);
+        si5351_WriteRegister(156, SSUP_P2[1]);
+        si5351_WriteRegister(157, SSUP_P2[0]);
+        si5351_WriteRegister(158, SSUP_P3[1]);
+        si5351_WriteRegister(159, SSUP_P3[0]);
+        si5351_WriteRegister(160, SSUP_P1[0]);
+        si5351_WriteRegister(161, SSUP_P1[1]);
+
+        
+        return true; // signal that spread spectrum was sucessfully set
+      }
+      else
+      {//done?
+        //The requested spread is not within the requested limits
+        //Do something, IDK
+        return false; // signal that there was a problem
+      }
+    }
+  }
 }
 
 bool //works //done?
@@ -224,7 +385,7 @@ si5351_init()
   si5351_WriteRegister(33, 0x00); // set numerator bits [7:0] to 0
 
   
-  delay(10);
+  delay(10); // wait to make sure the PLL has locked if it will lock
 
   
   
