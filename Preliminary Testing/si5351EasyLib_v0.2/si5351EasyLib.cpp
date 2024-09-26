@@ -21,6 +21,7 @@
           My email address jeffbezoslegit69@gmail.com
         Failure to aquire permission for use in closed-source products may result in:
           My feelings being hurt
+          Something else if I feel like it
 */
 
 
