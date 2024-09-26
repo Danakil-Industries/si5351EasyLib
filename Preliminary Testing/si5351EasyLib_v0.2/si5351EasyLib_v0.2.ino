@@ -27,28 +27,27 @@
 //constructors
 si5351 mySynth;//create instance of the library "mySynth"
 
+
+
+  const float fmAmplitude = 50;
+  const float fmCenter = 100;
+
 void setup() {
   // put your setup code here, to run once:
-  //Serial.begin(115200); // just for debugging
+  Serial.begin(115200); // just for debugging
   
   mySynth.begin();
-  mySynth.spreadSpectrum(1.0,false);
+  //mySynth.spreadSpectrum(1.0,false);
 }
 
 void loop() { // run a couple demos
 
-  for(float theta = 0; theta < 360; theta++){//sinusoidal FM sweep between 50 kHz and 100 kHz in roughly 3.6 sec
-    delay(10);
-    float currFreq = -25*cos((theta * 3.1415) / 180) + 75;
-    mySynth.updateOutput(1, currFreq, 0);
-  }
 
-  for(float currFreq = 50; currFreq < 100; currFreq++){//linear FM sweep from 50 kHz to 100kHz in roughly 1.5 sec
-    delay(30);
-    mySynth.updateOutput(1, currFreq, 0);
-  }
-  for(float currFreq = 100; currFreq > 50; currFreq--){//linear FM sweep from 100 kHz to 50 kHz in roughly 0.75 sec
-    delay(15);
+  //mySynth.updateOutput(1, 100, 0);
+
+  for(float theta = 0; theta <= 360; theta++){//sinusoidal FM sweep with a period of roughly 3.6 seconds
+    delay(20);
+    float currFreq = fmAmplitude * cos((theta * 3.1415) / 180) + fmCenter;
     mySynth.updateOutput(1, currFreq, 0);
   }
 }
