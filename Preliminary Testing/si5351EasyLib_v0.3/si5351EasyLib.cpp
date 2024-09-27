@@ -40,6 +40,7 @@
 */
 #include "Arduino.h"
 #include "si5351EasyLib.h"
+#include <integer24.h>
 #include <HardwareSerial.h>
 
 
@@ -100,7 +101,7 @@ si5351::begin() //modified name to fit library initialization
   writeRegister(22, 0b11000000); // turn off clock 6 and put PLL A into integer mode
   writeRegister(23, 0b11000000); // turn off clock 7 and put PLL B into integer mode (even though it won't be used)
 
-  writeRegister(149, 0x00);//make sure spread spectrum is off
+  writeRegister(149, 0x00);//make sure spread spectrum is off by default
 
   
 
@@ -329,16 +330,20 @@ si5351::spreadSpectrum(float percent, bool downSpread)
 bool //works //done?
 si5351::updateOutput(uint8_t outputNumber, float newFreq, uint8_t newPhase)
 {
-  Serial.print("p1: ");//-------------------------------------------------------------
-  Serial.println(micros());
+  unsigned long times[10];//debugging variable for keeping track of how long things are taking
+
+  times[0] = micros();//see how long it takes to record the time for baseline stuff
+  times[1] = micros();//---------------------------------------------------------------------
+
   //first, check if the requested frequency is within the allowed limits
   if ((newFreq >= SI5351_minFreqOut) && (newFreq <= SI5351_maxFreqOut))
   {
     //if it's within the allowed limits, carry on
-    Serial.print("p2: ");//-------------------------------------------------------------
-    Serial.println(micros());
+
+    times[2] = micros();//---------------------------------------------------------------------
     //find the rDiv value that will be used
     uint8_t rDiv = SI5351_minR(newFreq);
+    times[3] = micros();//---------------------------------------------------------------------
 
     //calculate the frequency that the corresponding MultiSynth needs to output
     float msOutFreq = ((float)rDiv) * newFreq;
@@ -348,13 +353,12 @@ si5351::updateOutput(uint8_t outputNumber, float newFreq, uint8_t newPhase)
     float divRatio = 750000 / msOutFreq; //this is the part that relies on PLL A being at 750 MHz
     //find the int part of the ratio
     uint32_t intPart = 0;
-    while (divRatio > 1)
-    { // while there is still more integer to go...
-      if (divRatio > 1) { // make certain that there is more integer
-        divRatio--; // subtract 1 from the ratio...
-        intPart++;  // and add it to the integer part
-      }
-    }
+    times[4] = micros();//---------------------------------------------------------------------
+    intPart = floor(divRatio); // this was taking between roughly 8 and 18 ms before changing how it was done.
+    divRatio = divRatio - ((float)intPart);
+    times[5] = micros();//---------------------------------------------------------------------
+
+    
     //find the numer part
     uint32_t numerPart = (uint32_t)(divRatio * msDenominator);
 
@@ -374,24 +378,32 @@ si5351::updateOutput(uint8_t outputNumber, float newFreq, uint8_t newPhase)
     Serial.println(",");
     Serial.print("  and an output divider of ");
     Serial.println(rDiv);*/
-    Serial.print("p3: ");//-------------------------------------------------------------
-    Serial.println(micros());
-    SI5351_updateMsParam(outputNumber, intPart, numerPart, msDenominator, rDiv); // update the addressed multisynth and its divider
-    Serial.print("p4: ");//-------------------------------------------------------------
-    Serial.println(micros());
+    times[6] = micros();//---------------------------------------------------------------------
+    SI5351_updateMsParam(outputNumber, intPart, numerPart, msDenominator, rDiv); // update the addressed multisynth and its divider // taking about 2.75ms
+    times[7] = micros();//---------------------------------------------------------------------
 
     writeRegister((165 + outputNumber), newPhase); // Set the output phase
-    Serial.print("p5: ");//-------------------------------------------------------------
-    Serial.println(micros());
+    times[8] = micros();//---------------------------------------------------------------------
 
     /*Serial.print("Output ");
     Serial.print(outputNumber);
     Serial.println(" turned on");*/
-    SI5351_updateClkCont(outputNumber, 0); // turn on the output
-    Serial.print("p6: ");//-------------------------------------------------------------
-    Serial.println(micros());
-    Serial.print("p7: ");//-------------------------------------------------------------
-    Serial.println(micros());
+    SI5351_updateClkCont(outputNumber, 0); // turn on the output // taking about 1.5ms
+    times[9] = micros();//---------------------------------------------------------------------
+
+    
+    for(uint8_t i=0; i<8; i++)
+    {
+      Serial.print("t");
+      Serial.print(i+1);
+      Serial.print(i);
+      Serial.print(":");
+      Serial.print(times[i+1]-times[i]);
+      Serial.print(",");
+    }
+      Serial.print("t98: ");
+      Serial.println(times[9]-times[8]);
+
     return true;
   }
   else
@@ -411,7 +423,7 @@ si5351::updateOutput(uint8_t outputNumber, float newFreq, uint8_t newPhase)
  * Brief: Returns the minimum allowable R output divider setting to keep the output's multisynth frequency above the minimum frequency based on a desired output frequency.
  */
 uint8_t //works // done?
-si5351::SI5351_minR(float outputFreqKHz) //calculates the minimum output divider setting to keep the output's multisynth above the minimum threashold
+si5351::SI5351_minR(float outputFreqKHz) //calculates the minimum output divider setting to keep the output's multisynth above the minimum threshold
 {
   uint16_t currentR = 1;
   float currentFreq = 0;
@@ -446,7 +458,7 @@ si5351::SI5351_minR(float outputFreqKHz) //calculates the minimum output divider
  * uint32_t ms_denomPart: The encoded denominator part of the ms divider
  * uint8_t R_OutputDividerDec: The desired R output divider setting
  */
-void //works // done?
+void //works // done? // taking about 2.75 ms
 si5351::SI5351_updateMsParam(uint8_t msNumber, uint32_t ms_intPart, uint32_t ms_numerPart, uint32_t ms_denomPart, uint8_t R_OutputDividerDec)
 {
   /*Serial.print("Updating MS");
