@@ -1,5 +1,15 @@
 /*
-   SI5351 Easy Library v0.2 PRELIMINARY
+   @file si5351EasyLib.cpp
+
+   @mainpage si5351EasyLib
+
+   @author Kowolski (Danakil Industries)
+
+   @brief Easy driver for the SI5351A Clock Generator
+
+   @section Notes
+   
+   SI5351 Easy Library v0.3 PRELIMINARY
 
    Written by: Kowolski
 
@@ -35,9 +45,6 @@
     All outputs are based on PLL A
 */
 
-/*TODO:
-	Modify functions to suit calling and classes 
-*/
 #include "Arduino.h"
 #include "si5351EasyLib.h"
 #include <integer24.h>
@@ -58,22 +65,28 @@ si5351::si5351() // constructor
 
 
 /*
- * Brief: Initializes the si5351 and performs initial setup
+ * @brief Initializes the SI5351 and performs initial setup (call this function before doing anything else)
  * 
- * Non-Brief:
- * * Initializes the I2C connection to the si5351A
- * * Updates some misc registers
- * * Updates clock control registers
- * * Disables spread spectrum
- * * Sets XO load capacitance to 10 pF
- * * Configure PLL A to run at 750 MHz
- * * Return false if the error register reveals an error
+ * @section Return Value
+ *  Returns a boolean value
+ *  * true: The SI5351's error register indicates everything is fine after initialization
+ *  * false: The SI5351's error register indicates a problem after initialization
+ * 
+ * @section Non-Brief:
+ *   Initializes the I2C connection to the si5351A
+ *   Updates some misc registers
+ *   Updates clock control registers
+ *   Disables spread spectrum
+ *   Sets XO load capacitance to 10 pF
+ *   Configure PLL A to run at 750 MHz
+ *   Return false if the error register reveals an error
  */
-bool //works
-si5351::begin() //modified name to fit library initialization
+bool
+si5351::begin()
 {
   
   Wire.begin(); //Slide into her DMs as a host
+  Wire.setClock(400000); // use high speed mode so things don't take as long
   delay(100); //yes, this is probably unnecessarially long. However, this is here for a reason. I would put why here if I could remember, I just remember it was important
 
 
@@ -142,19 +155,27 @@ si5351::begin() //modified name to fit library initialization
 
 
 /*
- * Brief: Configures the spread spectrum capabilities of the SI5351
+ * @brief Configures the spread spectrum capabilities of the SI5351A
  * 
- * float percent: The spread width as a percentage of the PLL's frequency
- *        Set to 0 to disable spread spectrum
- *        Can be between -2.5 and -0.1 when downSpread is true
- *        Can be between -1.5 and -0.1 or 0.1 and 1.5 when downSpread is false
+ * @param percent The spread width as a percentage of the PLL's frequency
+ *         * Set to 0 to disable spread spectrum
+ *         * Can be between -2.5 and -0.1 when downSpread is true
+ *         * Can be between -1.5 and -0.1 or 0.1 and 1.5 when downSpread is false
  *        
- * bool downSpread: Downspread is used when true. Center spread is used when false.
+ * @param downSpread Chooses the spread spectrum type
+ *  * Down spread is used when true 
+ *  * Center spread is used when false
  * 
- * Notes:
- * *Spread spectrum is applied directly to PLL A and will thus effect all outputs.
+ * @section Return Value
+ * Returns a boolean value
+ *  * true: The spread spectrum settings were accepted
+ *  * false: The spread spectrum settings were rejected
+ *  
+ * @section Notes:
+ *  * Spread spectrum is applied directly to PLL A and will thus effect all outputs.
+ *  * Spread spectrum is disabled by default
  */
-bool //appears to work //done?
+bool
 si5351::spreadSpectrum(float percent, bool downSpread)
 {
   //check if the requested spread is 0 (turn off)
@@ -321,29 +342,31 @@ si5351::spreadSpectrum(float percent, bool downSpread)
 
 
 /*
- * Brief: Updates the frequency and phase of the given output. Returns false and turns off output if the requested frequency is not within bounds.
+ * @brief Updates the frequency and phase of the given output. 
  * 
- * uint8_t outputNumber: The output number of the chip. Can be between 0 and 5.
- * float newFreq: The desired frequency in kHz. Can be between 4 kHz and 112 MHz.
- * uint8_t newPhase: The initial phase angle in 90° increments. Can be 0, 90, 180, or 270.
+ * @section Return Value
+ * Returns a boolean value
+ * * true: The new settings were accepted
+ * * false: The new settings were rejected. Also turns off output.
+ * 
+ * @param outputNumber The output number of the chip 
+ *  * Can be between 0 and 5.
+ * @param newFreq The desired frequency in kHz
+ *  * Can be between 4 kHz and 112 MHz
+ * @param newPhase The initial phase angle 
+ *  * Can be 0, 90, 180, or 270.
  */
-bool //works //done?
+bool
 si5351::updateOutput(uint8_t outputNumber, float newFreq, uint8_t newPhase)
 {
-  unsigned long times[10];//debugging variable for keeping track of how long things are taking
-
-  times[0] = micros();//see how long it takes to record the time for baseline stuff
-  times[1] = micros();//---------------------------------------------------------------------
 
   //first, check if the requested frequency is within the allowed limits
-  if ((newFreq >= SI5351_minFreqOut) && (newFreq <= SI5351_maxFreqOut))
+  if ((newFreq >= SI5351_minFreqOut) && (newFreq <= SI5351_maxFreqOut)) // 12 µs
   {
     //if it's within the allowed limits, carry on
 
-    times[2] = micros();//---------------------------------------------------------------------
     //find the rDiv value that will be used
-    uint8_t rDiv = SI5351_minR(newFreq);
-    times[3] = micros();//---------------------------------------------------------------------
+    uint8_t rDiv = SI5351_minR(newFreq); // 72µs
 
     //calculate the frequency that the corresponding MultiSynth needs to output
     float msOutFreq = ((float)rDiv) * newFreq;
@@ -352,15 +375,13 @@ si5351::updateOutput(uint8_t outputNumber, float newFreq, uint8_t newPhase)
     //find the ratio
     float divRatio = 750000 / msOutFreq; //this is the part that relies on PLL A being at 750 MHz
     //find the int part of the ratio
-    uint32_t intPart = 0;
-    times[4] = micros();//---------------------------------------------------------------------
+    uint24_t intPart = 0;
     intPart = floor(divRatio); // this was taking between roughly 8 and 18 ms before changing how it was done.
     divRatio = divRatio - ((float)intPart);
-    times[5] = micros();//---------------------------------------------------------------------
 
     
     //find the numer part
-    uint32_t numerPart = (uint32_t)(divRatio * msDenominator);
+    uint24_t numerPart = (uint24_t)(divRatio * msDenominator);
 
     /*Serial.print("Set output ");
     Serial.print(outputNumber, DEC);
@@ -378,33 +399,17 @@ si5351::updateOutput(uint8_t outputNumber, float newFreq, uint8_t newPhase)
     Serial.println(",");
     Serial.print("  and an output divider of ");
     Serial.println(rDiv);*/
-    times[6] = micros();//---------------------------------------------------------------------
-    SI5351_updateMsParam(outputNumber, intPart, numerPart, msDenominator, rDiv); // update the addressed multisynth and its divider // taking about 2.75ms
-    times[7] = micros();//---------------------------------------------------------------------
+    SI5351_updateMsParam(outputNumber, intPart, numerPart, msDenominator, rDiv); // update the addressed multisynth and its divider // taking about 1ms, which is understandable(?)
 
-    writeRegister((165 + outputNumber), newPhase); // Set the output phase
-    times[8] = micros();//---------------------------------------------------------------------
+    writeRegister((165 + outputNumber), newPhase); // Set the output phase // taking about 128 µs
 
     /*Serial.print("Output ");
     Serial.print(outputNumber);
     Serial.println(" turned on");*/
-    SI5351_updateClkCont(outputNumber, 0); // turn on the output // taking about 1.5ms
-    times[9] = micros();//---------------------------------------------------------------------
+    SI5351_updateClkCont(outputNumber, 0); // turn on the output // taking about 532 µs
 
     
-    for(uint8_t i=0; i<8; i++)
-    {
-      Serial.print("t");
-      Serial.print(i+1);
-      Serial.print(i);
-      Serial.print(":");
-      Serial.print(times[i+1]-times[i]);
-      Serial.print(",");
-    }
-      Serial.print("t98: ");
-      Serial.println(times[9]-times[8]);
-
-    return true;
+    
   }
   else
   {
@@ -415,15 +420,27 @@ si5351::updateOutput(uint8_t outputNumber, float newFreq, uint8_t newPhase)
     SI5351_updateClkCont(outputNumber, 1); // turn off the output
     return false;
   }
+
+  return true;
 }
 
 
 
 /*
- * Brief: Returns the minimum allowable R output divider setting to keep the output's multisynth frequency above the minimum frequency based on a desired output frequency.
+ * @brief Calculates and returns the minimum allowable R output divider setting for the specified output frequency.
+ * 
+ * @param outputFreqKHz The frequency that the user wants to be leaving the clock generator IC
+ * 
+ * @section Return Value
+ * Returns a uint8_t
+ *  * returns 1, 2, 4, 8, 16, 32, 64, or 128 (the minimum allowable R divider value) if the specified frequency can be reached
+ *  * returns 0 if the specified frequency cannot be reached
+ *  
+ * @section Notes:
+ * Returned value is the minimum R output divider required to keep the output's multisynth frequency above the minimum allowable frequency.
  */
-uint8_t //works // done?
-si5351::SI5351_minR(float outputFreqKHz) //calculates the minimum output divider setting to keep the output's multisynth above the minimum threshold
+uint8_t
+si5351::SI5351_minR(float outputFreqKHz)
 {
   uint16_t currentR = 1;
   float currentFreq = 0;
@@ -450,16 +467,23 @@ si5351::SI5351_minR(float outputFreqKHz) //calculates the minimum output divider
 
 
 /*
- * Brief: Updates the multisynth parameters and R output divider setting
+ * @brief Updates the multisynth parameters and R output divider settings
  *     
- * uint8_t msNumber: Which multisynth's parameters are being updated. 0-5 are for outputs 0-5. 10 and 11 are for PLLs A and B respectively.
- * uint32_t ms_intPart: The encoded integer part of the ms divider
- * uint32_t ms_numerPart: The encoded numerator part of the ms divider
- * uint32_t ms_denomPart: The encoded denominator part of the ms divider
- * uint8_t R_OutputDividerDec: The desired R output divider setting
+ * @param msNumber Which multisynth's parameters are being updated. 
+ *  * Valid inputs are between 0 and 5, 10, and 11
+ *    * 0-5 are for outputs 0-5 
+ *    * 10 and 11 are for PLLs A and B respectively
+ * 
+ * @param ms_intPart The encoded integer part of the ms divider
+ * 
+ * @param ms_numerPart The encoded numerator part of the ms divider
+ * 
+ * @param ms_denomPart The encoded denominator part of the ms divider
+ * 
+ * @param R_OutputDividerDec The desired R output divider setting
  */
-void //works // done? // taking about 2.75 ms
-si5351::SI5351_updateMsParam(uint8_t msNumber, uint32_t ms_intPart, uint32_t ms_numerPart, uint32_t ms_denomPart, uint8_t R_OutputDividerDec)
+void //works // taking about 1.05 ms
+si5351::SI5351_updateMsParam(uint8_t msNumber, uint24_t ms_intPart, uint24_t ms_numerPart, uint24_t ms_denomPart, uint8_t R_OutputDividerDec)
 {
   /*Serial.print("Updating MS");
     Serial.print(msNumber);
@@ -478,22 +502,22 @@ si5351::SI5351_updateMsParam(uint8_t msNumber, uint32_t ms_intPart, uint32_t ms_
   //apply the correction to the integer part
   //Serial.print("Corrected integer ");
   //Serial.print(ms_intPart);
-  ms_intPart = (128 * ms_intPart)  + ((uint32_t)(floor(128 * (((float)ms_numerPart) / ((float)ms_denomPart))))) - 512;
+  ms_intPart = (128 * ms_intPart)  + ((uint24_t)(floor(128 * (((float)ms_numerPart) / ((float)ms_denomPart))))) - 512;
   //Serial.print(" to ");
   //Serial.println(ms_intPart);
   //Serial.print("Corrected numerator ");
   //Serial.print(ms_numerPart);
-  ms_numerPart = (128 * ms_numerPart) - ((uint32_t)(((float)ms_denomPart) * (floor(128 * (((float)ms_numerPart) / ((float)ms_denomPart))))));
+  ms_numerPart = (128 * ms_numerPart) - ((uint24_t)(((float)ms_denomPart) * (floor(128 * (((float)ms_numerPart) / ((float)ms_denomPart))))));
   //Serial.print(" to ");
   //Serial.println(ms_numerPart);
 
 
-
   //Make sure there isn't extra data in the inputs that shouldn't be there and move the data around if necessarry to do so in this step
-  ms_intPart = ms_intPart & 0x0003FFFF; // trim the ms integer part to 18 bits
-  ms_numerPart = ms_numerPart & 0x000FFFFF; // trim the ms numerator part to 20 bits
-  ms_denomPart = ms_denomPart & 0x000FFFFF; // trim the ms denominator part to 20 bits
+  ms_intPart = ms_intPart & 0x03FFFF; // trim the ms integer part to 18 bits
+  ms_numerPart = ms_numerPart & 0x0FFFFF; // trim the ms numerator part to 20 bits
+  ms_denomPart = ms_denomPart & 0x0FFFFF; // trim the ms denominator part to 20 bits
   //R_OutputDividerDec doesn't get filtering
+  
 
   //Update the msDivider ratio
 
@@ -501,9 +525,9 @@ si5351::SI5351_updateMsParam(uint8_t msNumber, uint32_t ms_intPart, uint32_t ms_
   //Format the data into the required format
   //format the integer part
   uint8_t formattedMs_intPart[3];
-  formattedMs_intPart[0] = (uint8_t) (ms_intPart & 0x000000FF);
-  formattedMs_intPart[1] = (uint8_t) ((ms_intPart & 0x0000FF00) >> 8);
-  formattedMs_intPart[2] = (uint8_t) ((ms_intPart & 0x00FF0000) >> 16);
+  formattedMs_intPart[0] = (uint8_t) (ms_intPart & 0x0000FF);
+  formattedMs_intPart[1] = (uint8_t) ((ms_intPart & 0x00FF00) >> 8);
+  formattedMs_intPart[2] = (uint8_t) ((ms_intPart & 0xFF0000) >> 16);
   /*Serial.print("Formatted integer ");
     Serial.print(ms_intPart, DEC);
     Serial.print("(0x");
@@ -516,9 +540,9 @@ si5351::SI5351_updateMsParam(uint8_t msNumber, uint32_t ms_intPart, uint32_t ms_
     Serial.println(formattedMs_intPart[0], HEX);*/
   //format the numerator part
   uint8_t formattedMs_numerPart[3];
-  formattedMs_numerPart[0] = (uint8_t) (ms_numerPart & 0x000000FF);
-  formattedMs_numerPart[1] = (uint8_t) ((ms_numerPart & 0x0000FF00) >> 8);
-  formattedMs_numerPart[2] = (uint8_t) ((ms_numerPart & 0x00FF0000) >> 16);
+  formattedMs_numerPart[0] = (uint8_t) (ms_numerPart & 0x0000FF);
+  formattedMs_numerPart[1] = (uint8_t) ((ms_numerPart & 0x00FF00) >> 8);
+  formattedMs_numerPart[2] = (uint8_t) ((ms_numerPart & 0xFF0000) >> 16);
   /*Serial.print("Formatted numerator ");
     Serial.print(ms_numerPart, DEC);
     Serial.print("(0x");
@@ -531,9 +555,9 @@ si5351::SI5351_updateMsParam(uint8_t msNumber, uint32_t ms_intPart, uint32_t ms_
     Serial.println(formattedMs_numerPart[0, HEX]);*/
   //format the denominator part
   uint8_t formattedMs_denomPart[3];
-  formattedMs_denomPart[0] = (uint8_t) (ms_denomPart & 0x000000FF);
-  formattedMs_denomPart[1] = (uint8_t) ((ms_denomPart & 0x0000FF00) >> 8);
-  formattedMs_denomPart[2] = (uint8_t) ((ms_denomPart & 0x00FF0000) >> 16);
+  formattedMs_denomPart[0] = (uint8_t) (ms_denomPart & 0x0000FF);
+  formattedMs_denomPart[1] = (uint8_t) ((ms_denomPart & 0x00FF00) >> 8);
+  formattedMs_denomPart[2] = (uint8_t) ((ms_denomPart & 0xFF0000) >> 16);
   /*Serial.print("Formatted denominator ");
     Serial.print(ms_denomPart, DEC);
     Serial.print("(0x");
@@ -649,14 +673,25 @@ si5351::SI5351_updateMsParam(uint8_t msNumber, uint32_t ms_intPart, uint32_t ms_
   writeRegister(firstRegister + 6, formattedMs_numerPart[1]);
   writeRegister(firstRegister + 7, formattedMs_numerPart[0]);
 
+  
 }
 
 
 /*
- * Brief: Updates clock control bits for the specified output
+ * @brief Enables/disables the specified output
+ * 
+ * @param outputNumber The output whose state is being changed
+ *  * Can be between 0 and 5
+ *  
+ * @param outDisabled
+ *  * Is the new state disabled?
+ * 
+ * @section Notes:
+ *  Does more than just enable/disable the output
+ *   * Updates the clock control bits for the specified output
  */
 void //works // done?
-si5351::SI5351_updateClkCont(uint8_t outputNumber, bool outDisabled)
+si5351::SI5351_updateClkCont(uint8_t outputNumber, bool outDisabled) // taking about 532 µs
 {
   // This function is used to update registers 16-25, which are the clock control registers.
   //Yes, some values are hard coded. Sucks to be you if you want to change these values.
