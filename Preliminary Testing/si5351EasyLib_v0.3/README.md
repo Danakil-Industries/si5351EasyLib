@@ -8,9 +8,10 @@ Possible future ideas:
         * spreadSpectrum(float percent, enum centerSpread);
   * Make readRegister(...) and writeRegister(...) private functions
   * Inline functions used only once
-  * See about inlining other functions too if desperate for speed
+	   *Inlining minR did nothing for speed
+     * See about inlining other functions too if desperate for speed
   * Change to use uint24_t where possible
-     * Create uint24_t typedef
+     * Implemented 9/27/2024 - didn't make code any faster
   * Add user function to turn on/off outputs
      * Include ability to turn on/off all outputs w/ a single function call (aka "simultaneously" turn them on/off)
      * change updateOutput(...) to not automatically turn on output unless user function has set output state to ON
