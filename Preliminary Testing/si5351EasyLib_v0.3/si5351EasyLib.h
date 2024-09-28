@@ -1,7 +1,15 @@
 /*
-   SI5351 Easy Library v0.2 PRELIMINARY
+   @file si5351EasyLib.h
 
-   Written by: Kowolski
+   @mainpage si5351EasyLib
+
+   @author Kowolski (Danakil Industries)
+
+   @brief Easy driver for the SI5351A Clock Generator
+
+   @section Notes
+   
+   SI5351 Easy Library v0.3 PRELIMINARY
 
    Notes: This is the first version of the code that is implemented as a library.
           I am also not the best programmer.
@@ -20,6 +28,7 @@
           My email address jeffbezoslegit69@gmail.com
         Failure to aquire permission for use in closed-source products may result in:
           My feelings being hurt
+          Something else if I feel like it
 */
 
 	
@@ -35,7 +44,9 @@
 	#ifndef Wire_h
 		#include <Wire.h> // include the wire library if it wasn't already included
 	#endif
-
+  #ifndef uint24_t
+   #include <integer24.h>
+  #endif
 
 	//Defines
 		#define SI5351_minFreqOut 4 //minimum acceptable output frequency (kHz)
@@ -72,7 +83,7 @@
 		private:
 			//functions that only the library can call
 			uint8_t SI5351_minR(float outputFreqKHz); //returns the minimum output divider value that can be used for a given output frequency
-			void SI5351_updateMsParam(uint8_t msNumber, uint32_t ms_intPart, uint32_t ms_numerPart, uint32_t ms_denomPart, uint8_t R_OutputDividerDec);
+			void SI5351_updateMsParam(uint8_t msNumber, uint24_t ms_intPart, uint24_t ms_numerPart, uint24_t ms_denomPart, uint8_t R_OutputDividerDec);
 			void SI5351_updateClkCont(uint8_t outputNumber, bool outDisabled);
 	};
 	
