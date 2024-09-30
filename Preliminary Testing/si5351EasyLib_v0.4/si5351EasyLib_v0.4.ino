@@ -19,6 +19,7 @@
           My email address jeffbezoslegit69@gmail.com
         Failure to aquire permission for use in closed-source products may result in:
           My feelings being hurt
+          Something else if I feel like it
 */
 //#includes
 #include "si5351EasyLib.h"
@@ -38,22 +39,37 @@ void setup() {
   
   mySynth.begin();
   //mySynth.spreadSpectrum(1.0,false);
+
+  mySynth.updateOutput(output_1, 10, phase_0);
 }
 
 void loop() { // run a couple demos
 
+  
+
+  mySynth.spreadSpectrum(1,spreadType_disabled);
+  delay(500);
+  mySynth.spreadSpectrum(0,spreadType_downSpread);
+  delay(500);
+  mySynth.spreadSpectrum(0,spreadType_centerSpread);
+  delay(500);
+
+  mySynth.spreadSpectrum(-2.5,spreadType_downSpread);
+  delay(2000);
+  //mySynth.spreadSpectrum(1,spreadType_centerSpread);
+  //delay(2000);
 
   //mySynth.updateOutput(1, 100, 0);
   //unsigned long startTime;
   //unsigned long endTime;
   //startTime = micros();
-  for(float theta = 0; theta <= 360; theta++){//FM sweep
+  /*for(float theta = 0; theta <= 360; theta++){//FM sweep
     delay(30);
     float currFreq = fmAmplitude * sin((theta * 3.1415) / 180) + fmCenter;
     float currFreq2 = currFreq;
     mySynth.updateOutput(0, currFreq, 0);
     mySynth.updateOutput(1, currFreq2, 0);
-  }
+  }*/
   //endTime = micros();
   //Serial.print("sweepDuration:");
   //Serial.println(endTime - startTime);
