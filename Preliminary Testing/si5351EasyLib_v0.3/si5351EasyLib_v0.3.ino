@@ -3,7 +3,7 @@
 
    Written by: Kowolski
 
-   Notes: This is the first version of the code that is implemented as a library.
+   Notes: This is the second version of the code that is implemented as a library.
           I am also not the best programmer.
            I recognize the fact that my code is likely hard to understand and/or is trash.
           This code has only been tested using an SI5351A in a 10-MSOP package because it's the only type I currently have.
@@ -29,8 +29,8 @@ si5351 mySynth;//create instance of the library "mySynth"
 
 
 
-  const float fmAmplitude = 50;
-  const float fmCenter = 100;
+  const float fmAmplitude = 1;
+  const float fmCenter = 500;
 
 void setup() {
   // put your setup code here, to run once:
@@ -44,10 +44,17 @@ void loop() { // run a couple demos
 
 
   //mySynth.updateOutput(1, 100, 0);
-
-  for(float theta = 0; theta <= 360; theta++){//sinusoidal FM sweep with a period of roughly 3.6 seconds
-    delay(20);
-    float currFreq = fmAmplitude * cos((theta * 3.1415) / 180) + fmCenter;
-    mySynth.updateOutput(1, currFreq, 0);
+  //unsigned long startTime;
+  //unsigned long endTime;
+  //startTime = micros();
+  for(float theta = 0; theta <= 360; theta++){//FM sweep
+    delay(30);
+    float currFreq = fmAmplitude * sin((theta * 3.1415) / 180) + fmCenter;
+    float currFreq2 = currFreq;
+    mySynth.updateOutput(0, currFreq, 0);
+    mySynth.updateOutput(1, currFreq2, 0);
   }
+  //endTime = micros();
+  //Serial.print("sweepDuration:");
+  //Serial.println(endTime - startTime);
 }
