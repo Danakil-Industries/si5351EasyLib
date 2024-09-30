@@ -13,7 +13,7 @@
 
    Written by: Kowolski
 
-   Notes: This is the first version of the code that is implemented as a library.
+   Notes: This is the second version of the code that is implemented as a library.
           I am also not the best programmer.
            I recognize the fact that my code is likely hard to understand and/or is trash.
 		   This is also the first true library that I have written.
@@ -44,11 +44,21 @@
     PLL A is set to 750 MHz
     All outputs are based on PLL A
 */
+#ifndef Arduino_h
+  #include "Arduino.h"
+#endif
 
-#include "Arduino.h"
-#include "si5351EasyLib.h"
-#include <integer24.h>
-#include <HardwareSerial.h>
+#ifndef si5351EasyLib_h
+  #include "si5351EasyLib.h"
+#endif
+
+#ifndef uint24_t
+  #include <integer24.h>
+#endif
+
+#ifndef HardwareSerial_h
+  #include <HardwareSerial.h>
+#endif
 
 
 
