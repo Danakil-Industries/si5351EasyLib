@@ -11,7 +11,7 @@
    
    SI5351 Easy Library v0.3 PRELIMINARY
 
-   Notes: This is the first version of the code that is implemented as a library.
+   Notes: This is the second version of the code that is implemented as a library.
           I am also not the best programmer.
            I recognize the fact that my code is likely hard to understand and/or is trash.
 		   This is also the first true library that I have written.
@@ -20,7 +20,7 @@
            This also means that outputs 3-5 have not been tested yet. That said, it is highly likely that they will work just fine.
           KEEP PLL A SET TO 750 MHz!
            The frequency setting code relies on this frequency
-
+           
    I release this code for use with non-profit projects(e.g. hobby projects) and/or open source projects/products.
       Use of any of this code in any closed-source products requires explicit permission from Danakil Industries on a per product basis.
         Whomst can be contacted via github or email.
@@ -29,6 +29,10 @@
         Failure to aquire permission for use in closed-source products may result in:
           My feelings being hurt
           Something else if I feel like it
+  
+  @section Dependencies
+  This library requires one or more other libraries to work. Wether or not thesre need to be manually installed still needs to be investigated.
+   * integer24.h
 */
 
 	
