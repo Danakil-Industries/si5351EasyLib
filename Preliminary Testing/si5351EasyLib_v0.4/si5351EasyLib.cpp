@@ -186,10 +186,10 @@ si5351::begin()
  *  * Spread spectrum is disabled by default
  */
 bool
-si5351::spreadSpectrum(float percent, bool downSpread)
+si5351::spreadSpectrum(float percent, SpreadType spreadType)
 {
-  //check if the requested spread is 0 (turn off)
-  if(0 == percent)
+  //check if the requested spread is 0 (turn off) or spreadType is spreadType_disabled
+  if((0 == percent)||(spreadType_disabled == spreadType))
   { //done?
     //turn off the spread spectrum
       writeRegister(149, 0x00); //set spread spec enable bit to 0 (along w/ the rest of the reg, but doesn't matter)
@@ -198,6 +198,7 @@ si5351::spreadSpectrum(float percent, bool downSpread)
   }
   else
   {
+
     //initialize the variables that both modes share
     uint8_t SSUDP[2];
     float SSDN;
@@ -212,7 +213,7 @@ si5351::spreadSpectrum(float percent, bool downSpread)
     //Calculate and set shared parameters
     SSUDP[1] = 0x00; // based on the XO freq
     SSUDP[0] = 0xC6; // based on the XO freq
-    SSDN = (320/33) * (sscAmp / (1+sscAmp)) * (2 - ((float)downSpread)); // also based on SSUDP //check if works
+    SSDN = (320/33) * (sscAmp / (1+sscAmp)) * (2 - ((float)spreadType)); // also based on SSUDP //check if works
     SSDN_P1[1] = ((uint8_t)(((uint16_t)floor(SSDN))>> 8)) & 0x0F;
     SSDN_P1[0] = (uint8_t)(((uint16_t)floor(SSDN)) & 0x00FF);
     SSDN_P2[1] = (uint8_t)((((uint16_t)(32767 * (SSDN - floor(SSDN)))) & 0x7F00) >> 8);
@@ -221,12 +222,12 @@ si5351::spreadSpectrum(float percent, bool downSpread)
     SSDN_P3[0] = 0xFF; //given in AN619
     
         
-    if(true == downSpread)
-    { // done?
+    if(spreadType_downSpread == spreadType)
+    {
       //The spread type is down spread
       //is the requested spread within the allowable limits?
       if((percent >= SI5351_minSprSpecDown) && (percent <= SI5351_maxSprSpecDown))
-      {//done?
+      {
         //The requested spread is within the requested limits
 
         writeRegister(22, 0b10000000);//set PLL A to fractional mode
@@ -277,14 +278,14 @@ si5351::spreadSpectrum(float percent, bool downSpread)
         return true; // signal that spread spectrum was sucessfully set
       }
       else
-      {//done?
+      {
         //The requested spread is not within the requested limits
         //Do something, IDK
         return false; // signal that there was a problem
       }
     }
     else //-------------------------------------------
-    { // done?
+    {
       //The spread type is center spread
 
       //is the requested spread within the allowable limits?
@@ -367,7 +368,7 @@ si5351::spreadSpectrum(float percent, bool downSpread)
  *  * Can be 0, 90, 180, or 270.
  */
 bool
-si5351::updateOutput(uint8_t outputNumber, float newFreq, uint8_t newPhase)
+si5351::updateOutput(OutputNumber outputNumber, float newFreq, NewPhase newPhase)
 {
 
   //first, check if the requested frequency is within the allowed limits
