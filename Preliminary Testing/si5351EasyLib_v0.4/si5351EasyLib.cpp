@@ -92,7 +92,7 @@ si5351::si5351() // constructor
  *   Return false if the error register reveals an error
  */
 bool
-si5351::begin()
+si5351::begin() //didn't like being inlined
 {
   
   Wire.begin(); //Slide into her DMs as a host
@@ -172,9 +172,10 @@ si5351::begin()
  *         * Can be between -2.5 and -0.1 when downSpread is true
  *         * Can be between -1.5 and -0.1 or 0.1 and 1.5 when downSpread is false
  *        
- * @param downSpread Chooses the spread spectrum type
- *  * Down spread is used when true 
- *  * Center spread is used when false
+ * @param spreadType Chooses the spread type to be used
+ *  * spreadType_disabled
+ *  * spreadType_downSpread
+ *  * spreadType_centerSpread
  * 
  * @section Return Value
  * Returns a boolean value
@@ -361,11 +362,13 @@ si5351::spreadSpectrum(float percent, SpreadType spreadType)
  * * false: The new settings were rejected. Also turns off output.
  * 
  * @param outputNumber The output number of the chip 
- *  * Can be between 0 and 5.
+ *  * output_X
+ *    * where X is the output number (0-5)
  * @param newFreq The desired frequency in kHz
  *  * Can be between 4 kHz and 112 MHz
  * @param newPhase The initial phase angle 
- *  * Can be 0, 90, 180, or 270.
+ *  * phase_X
+ *     * where X can be 0, 90, 180, or 270
  */
 bool
 si5351::updateOutput(OutputNumber outputNumber, float newFreq, NewPhase newPhase)
