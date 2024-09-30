@@ -64,10 +64,39 @@
 		#define SI5351_maxSprSpecCent 1.5 // maximum acceptable center spread for spread spectrum operation (%)
 
 		#define msDenominator 1000000 // this is the MS denominator used for setting the feedbacks
-
 		#define SI5351_Addr 0x60 //This is the I2C address of the SI5351
 
-	
+
+   //enum(s) for spreadSpectrum()
+	 enum SpreadType{
+     spreadType_disabled = 2,
+     spreadType_downSpread = 1,
+     spreadType_centerSpread = 0
+   };
+
+
+   //enum(s) for updateOutput()
+   enum OutputNumber{
+    output_0 = 0,
+    output_1 = 1,
+    output_2 = 2,
+    output_3 = 3,
+    output_4 = 4,
+    output_5 = 5
+   };
+   enum NewPhase{
+    phase_0 = 0,
+    phase_90 = 90,
+    phase_180 = 180,
+    phase_270 = 270
+   };
+
+  /*
+    TODO:
+     * Modify spreadSpectrum to work with the spread type specified as an enum
+     * Modify updateOutput to work with the outputNumber and newPhase specified as enums
+     * Make sure nothing broke
+  */
 	
 	//functions
 	class si5351 //create the class si5351
@@ -77,8 +106,8 @@
 			si5351();
 			bool begin(); //Initializes the SI5351A
 			
-			bool spreadSpectrum(float percent, bool downSpread); //Enable/disable the spread spectrum, set the spread type, and width
-			bool updateOutput(uint8_t outputNumber, float newFreq, uint8_t newPhase); //Used to set the output frequency and phase(90° increments only) of a given channel
+			bool spreadSpectrum(float percent, SpreadType spreadType); //Enable/disable the spread spectrum, set the spread type, and width
+			bool updateOutput(OutputNumber outputNumber, float newFreq, NewPhase newPhase); //Used to set the output frequency and phase(90° increments only) of a given channel
 			
 			uint8_t readRegister(uint8_t regNumber);//Reads the value in a specified register and returns its value
 			void writeRegister(uint8_t regNumber, uint8_t newValue); //Writes a specified value to a specified register. Use with caution, as this can interfere with the library/cause unexpected results
