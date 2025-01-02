@@ -1,0 +1,6 @@
+si5351 KEYWORD1
+begin KEYWORD2
+spreadSpectrum KEYWORD2
+updateOutput KEYWORD2			
+readRegister KEYWORD2
+writeRegister KEYWORD2
