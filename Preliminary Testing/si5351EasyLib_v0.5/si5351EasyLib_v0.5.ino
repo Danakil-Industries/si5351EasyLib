@@ -30,23 +30,36 @@ si5351 mySynth;//create instance of the library "mySynth"
 
 
 
-  const float fmAmplitude = 1;
-  const float fmCenter = 500;
+  const float fmAmplitude = 10;
+  const float fmCenter = 100;
 
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200); // just for debugging
   
-  mySynth.begin();
+  
+  Serial.println("Init started");
+  bool initSuccess = mySynth.begin();
+  Serial.println("Init finished");
+  if(true==initSuccess){
+    Serial.println("SI5351A successfully initialized");
+  }
+  else
+  {
+    Serial.println("Failed to initialize SI5351A");
+    while(1){
+      delay(1000);
+    }
+  }
   //mySynth.spreadSpectrum(1.0,false);
 
-  mySynth.updateOutput(output_1, 10, phase_0);
+  //mySynth.updateOutput(output_1, 10, phase_0);
 }
 
 void loop() { // run a couple demos
 
   
-
+/*
   mySynth.spreadSpectrum(1,spreadType_disabled);
   delay(500);
   mySynth.spreadSpectrum(0,spreadType_downSpread);
@@ -56,6 +69,7 @@ void loop() { // run a couple demos
 
   mySynth.spreadSpectrum(-2.5,spreadType_downSpread);
   delay(2000);
+  */
   //mySynth.spreadSpectrum(1,spreadType_centerSpread);
   //delay(2000);
 
@@ -63,13 +77,19 @@ void loop() { // run a couple demos
   //unsigned long startTime;
   //unsigned long endTime;
   //startTime = micros();
-  /*for(float theta = 0; theta <= 360; theta++){//FM sweep
+  for(float theta = 0; theta <= 360; theta++){//FM sweep
     delay(30);
     float currFreq = fmAmplitude * sin((theta * 3.1415) / 180) + fmCenter;
-    float currFreq2 = currFreq;
-    mySynth.updateOutput(0, currFreq, 0);
-    mySynth.updateOutput(1, currFreq2, 0);
-  }*/
+    bool result;
+    result = mySynth.updateOutput(0, currFreq, 0);
+    if(true==result){
+      Serial.println("The settings were accepted");
+    }
+    else
+    {
+      Serial.println("The settings were NOT accepted");
+    }
+  }
   //endTime = micros();
   //Serial.print("sweepDuration:");
   //Serial.println(endTime - startTime);

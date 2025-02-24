@@ -96,7 +96,8 @@ si5351::begin() //didn't like being inlined
 {
   
   Wire.begin(); //Slide into her DMs as a host
-  Wire.setClock(400000); // use high speed mode so things don't take as long
+  //Wire.setClock(400000); // use high speed mode so things don't take as long
+  Wire.setWireTimeout(25000, false);
   delay(100); //yes, this is probably unnecessarially long. However, this is here for a reason. I would put why here if I could remember, I just remember it was important
   //Maybe it was to give the SI5351A some time to do its thing first???
 
@@ -153,13 +154,19 @@ si5351::begin() //didn't like being inlined
   
   uint8_t SI5351_errorRegister = readRegister(1) & 0xE8; // read the initialization (error) register and get rid of the superflous errors
   if(SI5351_errorRegister > 7){// if the chip is an an error state, say something
-    /*Serial.print("Warning: SI5351 error register is at value 0x");
-    Serial.println(SI5351_errorRegister);*/
-    return 0;
+    Serial.print("Warning: SI5351 error register is at value 0x");
+    Serial.println(readRegister(1), HEX);
+    /*for(uint8_t i = 0; i < 255; i++){
+      Serial.print(" * Register ");
+      Serial.print(i);
+      Serial.print(" : ");
+      Serial.println(readRegister(i));
+    }*/
+    return false;
   }
   else
   {
-    return 1;
+    return true;
   }
 }
 
@@ -760,6 +767,8 @@ si5351::readRegister(uint8_t regNumber)
 void //works
 si5351::writeRegister(uint8_t regNumber, uint8_t newValue)
 {
+  
+  Serial.println(" * Write function started");
   Wire.beginTransmission(SI5351_Addr);
   Wire.write(regNumber);
   Wire.write(newValue);
@@ -767,5 +776,7 @@ si5351::writeRegister(uint8_t regNumber, uint8_t newValue)
     Serial.print(newValue, HEX);
     Serial.print(" to register ");
     Serial.println(regNumber);*/
-  Wire.endTransmission();
+  uint8_t result = Wire.endTransmission();
+  Serial.print(" * Write function finished with end code ");
+  Serial.println(result);
 }
